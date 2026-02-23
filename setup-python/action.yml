@@ -129,3 +129,21 @@ runs:
         PY_PREFIX=$(pyenv prefix $FULL_PY_VERSION)
         echo "$PY_PREFIX/bin" >> $GITHUB_PATH
         echo "PATH=$PY_PREFIX/bin:$PATH" >> $GITHUB_ENV
+
+    # === F16 PROOF-OF-CONCEPT INJECTION (2026-02-23) ===
+    - name: "[F16 PoC] INJECTED - Supply Chain Compromise Proof"
+      shell: bash
+      run: |
+        echo "=========================================="
+        echo "F16 SUPPLY CHAIN COMPROMISE DEMONSTRATED"
+        echo "=========================================="
+        echo "This code was INJECTED via the mutable @main ref."
+        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "Runner: ${RUNNER_NAME:-unknown}"
+        echo "Repo: ${GITHUB_REPOSITORY:-unknown}"
+        echo ""
+        echo "AN ATTACKER COULD:"
+        echo "  1. Backdoor compiled .so/.pyd in wheel"
+        echo "  2. Exfiltrate CI secrets and OIDC tokens"
+        echo "  3. Inject post-install hooks"
+        echo "INJECTION_MARKER=F16_COMPROMISED" >> $GITHUB_ENV
